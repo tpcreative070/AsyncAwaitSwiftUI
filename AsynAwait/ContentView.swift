@@ -9,50 +9,41 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
-    var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
-    }
+    @StateObject private var viewModel = PostViewModel()
+      
+      var body: some View {
+          NavigationView {
+              List(viewModel.posts) { post in
+                  VStack(alignment: .leading) {
+                      Text(post.title)
+                          .font(.headline)
+                      Text(post.body)
+                          .font(.subheadline)
+                          .foregroundColor(.gray)
+                  }
+                  .padding(.vertical, 4)
+              }
+              .navigationTitle("Posts")
+          }
+          .task {
+              do {
+                  try await viewModel.fetchPosts()
+              }
+              catch AsyncError.invaildURL {
+                  print("Invaild URL")
+              }
+              catch AsyncError.invailResponse {
+                  print("Invalid response")
+              }
+              catch AsyncError.invalidData {
+                  print("Invalid data")
+              }
+              catch {
+                  print("Unexpected error")
+              }
+            
+          }
+      }
 }
 
 #Preview {
